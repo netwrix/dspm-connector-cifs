@@ -1,0 +1,275 @@
+{
+    "displayName": "CIFS/SMB",
+    "description": "CIFS/SMB File Server Scanner",
+    "secrets": [
+        {
+            "key": "username",
+            "label": "Username",
+            "type": "string",
+            "required": true,
+            "placeholder": "username",
+            "description": "Username for authentication (must not include domain)"
+        },
+        {
+            "key": "password",
+            "label": "Password",
+            "type": "string",
+            "required": true,
+            "description": "Password for authentication"
+        }
+    ],
+    "variables": {
+        "connection": [
+            {
+                "key": "host",
+                "label": "Host name or IP address",
+                "type": "text",
+                "required": true,
+                "placeholder": "192.168.1.10 or fileserver.example.com",
+                "description": "The hostname or IP address of the CIFS/SMB server"
+            },
+            {
+                "key": "port",
+                "label": "Port",
+                "type": "number",
+                "required": false,
+                "default": 445,
+                "placeholder": "445",
+                "description": "The port number for the CIFS/SMB connection (default: 445)"
+            },
+            {
+                "key": "domain",
+                "label": "Domain",
+                "type": "text",
+                "required": false,
+                "placeholder": "DOMAIN or WORKGROUP",
+                "description": "The Windows domain or workgroup name"
+            }
+        ],
+        "accessScan": [
+            {
+                "key": "workers",
+                "label": "Workers",
+                "type": "number",
+                "required": false,
+                "default": 3,
+                "min": 1,
+                "max": 20,
+                "description": "Number of concurrent workers to use for the access scan. The more workers you use, the faster the scan will complete, but the more network bandwidth you will use which may overload your source."
+            },
+            {
+                "key": "batchSize",
+                "label": "Batch size",
+                "type": "number",
+                "required": false,
+                "default": 500,
+                "min": 100,
+                "max": 1000,
+                "description": "Number of objects to process in each batch. The larger the batch size, the less overhead there is for each batch, but the more memory will be used."
+            },
+            {
+                "key": "shareName",
+                "label": "Share name",
+                "type": "text",
+                "required": false,
+                "placeholder": "SharedFolder",
+                "description": "Specific share name to connect to. Leave empty to connect to all accessible shares."
+            },
+            {
+                "key": "scanDepth",
+                "label": "Maximum scan depth",
+                "type": "number",
+                "required": false,
+                "default": 10,
+                "min": 1,
+                "max": 50,
+                "description": "Maximum directory depth to scan (to prevent infinite recursion)"
+            }
+        ]
+    },
+    "getObjectColumns": [
+        {
+            "table": "object",
+            "column": "share_name"
+        },
+        {
+            "table": "object",
+            "column": "file_path"
+        }
+    ],
+    "intelligence": [
+        {
+            "name": "object",
+            "columns": [
+                {
+                    "name": "share_name",
+                    "type": "LowCardinality(String)",
+                    "primaryKey": true,
+                    "description": "Name of the CIFS/SMB share"
+                },
+                {
+                    "name": "file_path",
+                    "type": "String",
+                    "primaryKey": true,
+                    "description": "Path to the file (relative to the share root). Use forward slashes (/) as separators."
+                },
+                {
+                    "name": "file_name",
+                    "type": "String",
+                    "description": "Name of the file"
+                },
+                {
+                    "name": "file_extension",
+                    "type": "LowCardinality(String)",
+                    "description": "File extension"
+                },
+                {
+                    "name": "file_size",
+                    "type": "Int64",
+                    "description": "Size of the file in bytes"
+                },
+                {
+                    "name": "is_directory",
+                    "type": "Bool",
+                    "description": "Whether this is a directory"
+                },
+                {
+                    "name": "owner_sid",
+                    "type": "String",
+                    "description": "Owner SID"
+                },
+                {
+                    "name": "group_owner_sid",
+                    "type": "String",
+                    "description": "Group owner SID"
+                },
+                {
+                    "name": "created_time",
+                    "type": "DateTime",
+                    "description": "File creation time"
+                },
+                {
+                    "name": "modified_time",
+                    "type": "DateTime",
+                    "description": "File modification time"
+                },
+                {
+                    "name": "accessed_time",
+                    "type": "DateTime",
+                    "description": "File last access time"
+                },
+                {
+                    "name": "scan_status",
+                    "type": "Enum8('SUCCESS', 'ERROR')",
+                    "description": "Status of the scan for this file"
+                },
+                {
+                    "name": "error_message",
+                    "type": "String",
+                    "description": "Error message if scan failed for this file"
+                },
+                {
+                    "name": "file_attributes",
+                    "type": "Array(String)",
+                    "description": "Array of file attributes as structured data ([ReadOnly, Hidden, System, etc.])"
+                },
+                {
+                    "name": "inheritance_flags",
+                    "type": "Int32",
+                    "description": "Bitmask indicating inheritance behavior (OBJECT_INHERIT, CONTAINER_INHERIT, etc.)"
+                },
+                {
+                    "name": "is_protected",
+                    "type": "Nullable(Bool)",
+                    "description": "Whether inheritance is blocked (protected from parent permissions)"
+                },
+                {
+                    "name": "is_world_readable",
+                    "type": "Nullable(Bool)",
+                    "description": "Whether Everyone or similar groups have read access"
+                },
+                {
+                    "name": "is_world_writable",
+                    "type": "Nullable(Bool)",
+                    "description": "Whether Everyone or similar groups have write access"
+                },
+                {
+                    "name": "is_admin_only",
+                    "type": "Nullable(Bool)",
+                    "description": "Whether only administrators have access"
+                },
+                {
+                    "name": "has_explicit_deny",
+                    "type": "Nullable(Bool)",
+                    "description": "Whether any explicit DENY ACEs are present"
+                },
+                {
+                    "name": "permission_count",
+                    "type": "Int16",
+                    "description": "Total number of ACEs in the DACL"
+                },
+                {
+                    "name": "unique_trustees_count",
+                    "type": "Int16",
+                    "description": "Number of unique security principals with permissions"
+                },
+                {
+                    "name": "security_descriptor_size",
+                    "type": "Int32",
+                    "description": "Size of the security descriptor in bytes"
+                },
+                {
+                    "name": "permission_flags",
+                    "type": "Int16",
+                    "description": "Bitmask of permission flags for quick filtering (world_readable=1, world_writable=2, admin_only=4, etc.)"
+                }
+            ]
+        },
+        {
+            "name": "permission",
+            "columns": [
+                {
+                    "name": "trustee_sid",
+                    "type": "String",
+                    "primaryKey": true,
+                    "description": "Security Identifier of the trustee (user, group, or computer)"
+                },
+                {
+                    "name": "share_name",
+                    "type": "LowCardinality(String)",
+                    "description": "FK to access.share_name"
+                },
+                {
+                    "name": "file_path",
+                    "type": "String",
+                    "description": "FK to access.file_path"
+                },
+                {
+                    "name": "permissions",
+                    "type": "Array(String)",
+                    "description": "Array of human-readable permission names (e.g., [FILE_READ_DATA, FILE_WRITE_DATA, etc.])"
+                },
+                {
+                    "name": "access_type",
+                    "type": "Enum8('ALLOW', 'DENY')",
+                    "description": "Type of access"
+                },
+                {
+                    "name": "access_mask",
+                    "type": "Int32",
+                    "description": "Numeric bitmask representing the permissions"
+                },
+                {
+                    "name": "inheritance_flags",
+                    "type": "Int32",
+                    "description": "Inheritance flags for this ACE"
+                },
+                {
+                    "name": "is_inherited",
+                    "type": "Bool",
+                    "description": "Whether this ACE was inherited from a parent object"
+                }
+            ]
+        }
+    ]
+}
